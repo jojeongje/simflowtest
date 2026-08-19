@@ -1,14 +1,18 @@
 import os
-import time
+import json
 import logging
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # ------------------------------------------------------------------------
-# ixi-Simflow 플랫폼 규칙: 산출물은 반드시 아래 경로에 저장해야 함
+# ixi-Simflow 플랫폼 규칙
 # ------------------------------------------------------------------------
 OUTPUT_DIR = "/simflow/output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# 로깅 설정 (run.sh의 표준 출력 캡처와 연동)
+HOST = "0.0.0.0"
+PORT = 8000
+
+# 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -16,38 +20,101 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+class SimflowHandler(BaseHTTPRequestHandler):
+
+    def send_json(self, status_code, data):
+        response = json.dumps(data, ensure_ascii=False).encode("utf-8")
+
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(response)))
+        self.end_headers()
+
+        self.wfile.write(response)
+
+    def do_GET(self):
+        logger.info(f"GET {self.path}")
+
+        # Health Check
+        if self.path == "/health":
+            self.send_json(200, {
+                "status": "ok",
+                "service": "ixi-simflow-dummy-api"
+            })
+            return
+
+        # 기본 API
+        if self.path == "/":
+            self.send_json(200, {
+                "message": "ixi-Simflow Dummy API",
+                "status": "running",
+                "port": PORT
+            })
+            return
+
+        # Model 정보
+        if self.path == "/model":
+            self.send_json(200, {
+                "model_type": "simflow-test-model",
+                "version": "v1.0",
+                "status": "success"
+            })
+            return
+
+        self.send_json(404, {
+            "error": "Not Found",
+            "path": self.path
+        })
+
+    def do_POST(self):
+        logger.info(f"POST {self.path}")
+
+        # /predict API
+        if self.path == "/predict":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length)
+
+            try:
+                request_data = json.loads(body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self.send_json(400, {
+                    "error": "Invalid JSON"
+                })
+                return
+
+            logger.info(f"Prediction request: {request_data}")
+
+            # 더미 추론 결과
+            self.send_json(200, {
+                "status": "success",
+                "model": "simflow-test-model",
+                "version": "v1.0",
+                "input": request_data,
+                "prediction": "dummy-result"
+            })
+            return
+
+        self.send_json(404, {
+            "error": "Not Found",
+            "path": self.path
+        })
+
+
 def main():
-    logger.info("🚀 ixi-Simflow 테스트 파이프라인 시작")
+    logger.info("🚀 ixi-Simflow Dummy API 시작")
+    logger.info(f"📡 서버 주소: http://{HOST}:{PORT}")
 
-    # 1. 데이터 로드 단계 (Mock)
-    # 실제로는 Data Foundry에서 준비된 데이터셋 경로를 읽어옵니다.
-    logger.info("학습 데이터 로딩 중...")
-    time.sleep(2) 
-    logger.info("✅ 데이터 로드 완료")
+    server = HTTPServer((HOST, PORT), SimflowHandler)
 
-    # 2. 모델 학습/최적화 루프 (Mock)
-    logger.info("모델 연산을 시작합니다.")
-    epochs = 3
-    for epoch in range(1, epochs + 1):
-        logger.info(f"Epoch {epoch}/{epochs} 진행 중...")
-        time.sleep(3) # 실제 GPU 연산 대기 시간 시뮬레이션
-        logger.info(f"Epoch {epoch} 완료 - Loss: {0.8 / epoch:.4f}")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        logger.info("🛑 서버 종료 요청")
+    finally:
+        server.server_close()
+        logger.info("✅ 서버 종료 완료")
 
-    # 3. 최종 산출물 저장 (핵심)
-    logger.info("연산 완료. 산출물을 플랫폼 Model Registry(OUTPUT_DIR) 경로에 저장합니다.")
-    
-    # 예시: 가중치 및 설정 파일 저장
-    dummy_model_path = os.path.join(OUTPUT_DIR, "model_weights.bin")
-    dummy_config_path = os.path.join(OUTPUT_DIR, "config.json")
-
-    with open(dummy_model_path, "wb") as f:
-        f.write(b"dummy weights data for simflow registry test")
-    
-    with open(dummy_config_path, "w", encoding="utf-8") as f:
-        f.write('{"model_type": "simflow-test-model", "version": "v1.0", "status": "success"}')
-
-    logger.info(f"✅ 모델 저장 완료: {OUTPUT_DIR}")
-    logger.info("🎉 파이프라인 정상 종료")
 
 if __name__ == "__main__":
     main()
