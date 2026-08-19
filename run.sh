@@ -47,18 +47,18 @@ fi
 
 log_info "Server IP       : ${SERVER_IP}"
 log_info "Listen Address  : 0.0.0.0"
-log_info "Listen Port     : 8000"
+log_info "Listen Port     : 38000"
 
 # -------------------------------------------------
 # 3. 접속 URL 출력
 # -------------------------------------------------
 if [ "$SERVER_IP" != "IP 확인 불가" ]; then
-    log_info "Health Check    : http://${SERVER_IP}:8000/health"
-    log_info "Root API        : http://${SERVER_IP}:8000/"
-    log_info "Model API       : http://${SERVER_IP}:8000/model"
-    log_info "Predict API     : http://${SERVER_IP}:8000/predict"
+    log_info "Health Check    : http://${SERVER_IP}:38000/health"
+    log_info "Root API        : http://${SERVER_IP}:38000/"
+    log_info "Model API       : http://${SERVER_IP}:38000/model"
+    log_info "Predict API     : http://${SERVER_IP}:38000/predict"
 else
-    log_info "Health Check    : http://<SERVER_IP>:8000/health"
+    log_info "Health Check    : http://<SERVER_IP>:38000/health"
 fi
 
 log_info "================================================="
