@@ -10,7 +10,7 @@ OUTPUT_DIR = "/simflow/output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 HOST = "0.0.0.0"
-PORT = 8000
+PORT = 38000
 
 # 로깅 설정
 logging.basicConfig(
